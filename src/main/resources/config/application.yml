@@ -1,7 +1,21 @@
 server:
-  port: 8080
+    port: 8096
+    servlet:
+        contextPath: /webssh
 spring:
-  mvc:
-    view:
-      prefix: /page/
-      suffix: .html
+    mvc:
+        view:
+            prefix: /page/
+            suffix: .html
+    user:
+        logged: WEBSSH
+logging:
+    file:
+        path: /var/log
+webssh:
+    first:
+        driver-class-name: oracle.jdbc.OracleDriver
+        url: jdbc:oracle:thin:@//${bd}:1521/DADOUNDG
+        username: your_username_here
+        password: your_password_here
+        session-name: WebSSH

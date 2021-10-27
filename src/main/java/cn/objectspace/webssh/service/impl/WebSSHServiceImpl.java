@@ -1,5 +1,7 @@
 package cn.objectspace.webssh.service.impl;
 
+import br.com.core.exception.NegocioException;
+import br.com.core.util.CriptografiaUtil;
 import cn.objectspace.webssh.constant.ConstantPool;
 import cn.objectspace.webssh.pojo.SSHConnectInfo;
 import cn.objectspace.webssh.pojo.WebSSHData;
@@ -9,12 +11,6 @@ import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketSession;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -24,14 +20,20 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
 
 /**
-* @Description: WebSSH业务逻辑实现
-* @Author: NoCortY
-* @Date: 2020/3/8
-*/
+ * @Description: WebSSH业务逻辑实现
+ * @Author: NoCortY
+ * @Date: 2020/3/8
+ */
 @Service
 public class WebSSHServiceImpl implements WebSSHService {
+
     //存放ssh连接信息的map
     private static Map<String, Object> sshMap = new ConcurrentHashMap<>();
 
@@ -70,10 +72,13 @@ public class WebSSHServiceImpl implements WebSSHService {
         WebSSHData webSSHData = null;
         try {
             webSSHData = objectMapper.readValue(buffer, WebSSHData.class);
+            webSSHData.setPassword(webSSHData.getPassword() != null ? CriptografiaUtil.decryptBase64(webSSHData.getPassword()) : null);
         } catch (IOException e) {
             logger.error("Json转换异常");
             logger.error("异常信息:{}", e.getMessage());
             return;
+        } catch (NegocioException ex) {
+            ex.printFluentLog();
         }
         String userId = String.valueOf(session.getAttributes().get(ConstantPool.USER_UUID_KEY));
         if (ConstantPool.WEBSSH_OPERATE_CONNECT.equals(webSSHData.getOperate())) {
@@ -122,7 +127,9 @@ public class WebSSHServiceImpl implements WebSSHService {
         SSHConnectInfo sshConnectInfo = (SSHConnectInfo) sshMap.get(userId);
         if (sshConnectInfo != null) {
             //断开连接
-            if (sshConnectInfo.getChannel() != null) sshConnectInfo.getChannel().disconnect();
+            if (sshConnectInfo.getChannel() != null) {
+                sshConnectInfo.getChannel().disconnect();
+            }
             //map中移除
             sshMap.remove(userId);
         }
